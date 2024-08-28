@@ -75,7 +75,7 @@ if [[ $user_packages == *ccache* ]]; then
 fi 
 
 # adding zsh
-su - "$USER_NAME" -c "wget -qO - https://raw.githubusercontent.com/deathmond1987/homework/main/zsh_home_install.sh | bash"
+su - "$USER_NAME" -c "wget -qO - https://raw.githubusercontent.com/deathmond1987/zsh_with_programs/main/zsh_install.sh | bash"
 if [[ $user_packages == *mc* ]]; then       
     # changing default mc theme
     echo "adding mc config"
