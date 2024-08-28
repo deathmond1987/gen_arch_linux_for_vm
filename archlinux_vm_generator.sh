@@ -556,7 +556,7 @@ LC_TIME=en_US.UTF-8' > /etc/locale.conf
         other_config () {
             # my personal config
             if [ "$WITH_CONFIG" = "true" ]; then
-                wget -O - "https://raw.githubusercontent.com/deathmond1987/homework/main/custom_config.sh" | bash
+                wget -O - "https://raw.githubusercontent.com/deathmond1987/gen_arch_linux_for_vm/main/custom_config.sh" | bash
             fi
     }
 
