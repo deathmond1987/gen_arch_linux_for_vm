@@ -47,8 +47,8 @@ deb_deps='arch-install-scripts e2fsprogs dosfstools lvm2'
 alpine_deps='pacman arch-install-scripts losetup dosfstools lvm2 e2fsprogs findmnt gawk grep lsblk'
 export pacman_opts='--needed --disable-download-timeout --noconfirm --disable-sandbox'
 export system_packages='lvm2 wget openssh grub efibootmgr parted networkmanager modemmanager usb_modeswitch'
-set -xoe noglob
-
+set -oe noglob
+# set -x 
 reset="\033[0m"
 
 red="\033[0;31m"
