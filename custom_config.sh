@@ -5,6 +5,7 @@ set -euo pipefail
 
 USER_NAME=${USER_NAME:-kosh}
 user_packages='docker docker-compose dive mc pigz docker-buildx polkit strace pacman-contrib pacman-cleanup-hook ccache qemu-base bc net-tools cpio etc-update'
+############## NEED TO ADD --disable-sandbox when flag will be in yay release ##################
 yay_opts='--answerdiff None --answerclean None --noconfirm --needed'
 
 if [ "$WSL_INSTALL" = "true" ]; then
@@ -61,8 +62,21 @@ sed -i '/Color/s/^#//g' /etc/pacman.conf
 sed -i 's/COMPRESSZST=(zstd -c -z -q -)/COMPRESSZST=(zstd -c -z -q --threads=0 -)/g' /etc/makepkg.conf
 # disable build debug package 
 sed -i 's/OPTIONS=(strip docs !libtool !staticlibs emptydirs zipman purge debug lto)/OPTIONS=(strip docs !libtool !staticlibs emptydirs zipman purge !debug lto)/g' /etc/makepkg.conf
+
+# installing yay
+# dropping root user bacause makepkg and yay not working from root user
+ su - $USER_NAME -c "git clone -q https://aur.archlinux.org/yay-bin && \
+                         cd yay-bin && \
+                         makepkg -si --noconfirm && \
+                         cd .. && \
+                         rm -rf yay-bin && \
+                         yay -Y --gendb && \
+                         yay -Syu --devel --noconfirm && \
+                         yay -Y --devel --save && \
+                         yay --editmenu --diffmenu=false --save"
+
 # installing packages 
-su - "$USER_NAME" -c "LANG=C yay -S $yay_opts $user_packages"
+su - "$USER_NAME" -c "yay -S $yay_opts $user_packages"
 if [[ $user_packages == *docker* ]]; then
     # админу локалхоста дозволено:)
     echo "adding user to docker group"    
