@@ -433,7 +433,8 @@ chroot_arch () {
     # go to arch
     arch-chroot "$MOUNT_PATH" <<-EOF
         #!/usr/bin/env bash
-        set -ex
+        set -e
+        # set -x 
 
         base_image_config_wsl () {
             # in current archiso not installed needed packages: sudo fakeroot strip (binutils). WHAT?!
