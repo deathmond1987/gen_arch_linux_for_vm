@@ -121,7 +121,7 @@ for project in ${PROJECT_LIST}; do
         git pull
         cd - &>/dev/null
     else
-        git clone "${project}"
+        git clone -q "${project}"
     fi
     echo "[ $project_name ] done."
 done
