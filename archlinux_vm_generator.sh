@@ -437,8 +437,9 @@ chroot_arch () {
 
         base_image_config_wsl () {
             # in current archiso not installed needed packages: sudo fakeroot strip (binutils). WHAT?!
-                pacman -Syu --noconfirm --needed
-                pacman -S $pacman_opts sudo fakeroot binutils
+            # so, we install default base and base-devel packages
+            pacman -Syu --noconfirm --needed
+            pacman -S $pacman_opts base base-devel
         }
 
         sudo_config () {
