@@ -45,9 +45,9 @@ rh_deps='arch-install-scripts e2fsprogs dosfstools lvm2'
 arch_deps='lvm2 dosfstools arch-install-scripts e2fsprogs'
 deb_deps='arch-install-scripts e2fsprogs dosfstools lvm2'
 alpine_deps='pacman arch-install-scripts losetup dosfstools lvm2 e2fsprogs findmnt gawk grep lsblk'
-export pacman_opts='--needed --disable-download-timeout --noconfirm'
+export pacman_opts='--needed --disable-download-timeout --noconfirm --disable-sandbox'
 export system_packages='lvm2 wget openssh grub efibootmgr parted networkmanager modemmanager usb_modeswitch'
-set -oe noglob
+set -xoe noglob
 
 reset="\033[0m"
 
@@ -433,14 +433,21 @@ chroot_arch () {
     # go to arch
     arch-chroot "$MOUNT_PATH" <<-EOF
         #!/usr/bin/env bash
-        set -exv
+        set -ex
+
+        base_image_config_wsl () {
+            # in current archiso not installed needed packages: sudo fakeroot strip (binutils). WHAT?!
+                pacman -Syu --noconfirm --needed
+                pacman -S $pacman_opts sudo fakeroot binutils
+        }
+
         sudo_config () {
-            # temporary disabling ask password
+            # temporary disabling ask password for yay
             sed -i 's/# %wheel ALL=(ALL:ALL) NOPASSWD: ALL/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /etc/sudoers
         }
 
         mkinitcpio_install () {
-            # install kernel and firmware
+            # install mkinitcpio
             pacman -S $pacman_opts mkinitcpio
         }
 
@@ -508,7 +515,7 @@ LC_TIME=en_US.UTF-8' > /etc/locale.conf
             # changing password
             echo "root:$PASSWORD" |chpasswd
             echo "$USER_NAME:$PASSWORD" |chpasswd
-            usermod -s /usr/bin/bash root
+            #usermod -s /usr/bin/bash root
         }
 
         git_install () {
@@ -516,25 +523,9 @@ LC_TIME=en_US.UTF-8' > /etc/locale.conf
             pacman -S $pacman_opts git
         }
 
-        yay_install () {
-            # dropping root user bacause makepkg and yay not working from root user
-            su - $USER_NAME -c "git clone https://aur.archlinux.org/yay-bin && \
-                          cd yay-bin && \
-                          yes | makepkg -si && \
-                          cd .. && \
-                          rm -rf yay-bin && \
-                          yay -Y --gendb && \
-                          yes | yay -Syu --devel && \
-                          yay -Y --devel --save && \
-                          yay --editmenu --diffmenu=false --save"
-        }
-
         apps_install () {
             # installing needed packages to working properly
-            su - $USER_NAME -c "LANG=C yay -S \
-                                      --answerdiff None \
-                                      --answerclean None \
-                                      --mflags \" --noconfirm\" --mflags \"--disable-download-timeout\" $system_packages"
+            pacman -S $pacman_opts $system_packages
             systemctl enable NetworkManager
             systemctl enable ModemManager
             systemctl enable sshd
@@ -571,7 +562,6 @@ LC_TIME=en_US.UTF-8' > /etc/locale.conf
             hostname_config
             user_config
             git_install
-            yay_install
             apps_install
             kernel_install
             grub_install
@@ -583,7 +573,7 @@ LC_TIME=en_US.UTF-8' > /etc/locale.conf
             # mkinitcpio (cause thereis no kernel)
             # kernel (cause container using wsl kernel)
             # grub (cause thereis no bios or uefi)
-
+            base_image_config_wsl
             sudo_config
             time_config
             locale_config
@@ -591,7 +581,6 @@ LC_TIME=en_US.UTF-8' > /etc/locale.conf
             hostname_config
             user_config
             git_install
-            yay_install
             apps_install
             other_config
         fi
@@ -639,7 +628,7 @@ postinstall_config () {
                     fi
                     if [ "$WITH_CONFIG" = true ]; then
                             ## now its first time when this os run in normal mode with systemd
-                            ## so we need to do all jobs with systemd dependency 
+                            ## so we need to do all jobs with systemd dependency
                             cd /opt/tor
                             docker-compose up -d
                             cd -
@@ -723,7 +712,9 @@ EOL
         # marking helper script executable
         chmod 777 "$MOUNT_PATH"/home/$USER_NAME/postinstall.sh
         arch-chroot "$MOUNT_PATH" <<-EOF
-        su - $USER_NAME -c 'echo yes | LANG=C yay -Sc'
+        if [ "$WITH_CONFIG" = "true" ]; then
+            su - $USER_NAME -c 'echo yes | LANG=C yay -Sc'
+        fi
         echo -e "y\nn" | pacman -Scc
         dd if=/dev/zero of=/zerofile || true
         sync
