@@ -93,8 +93,10 @@ su - "$USER_NAME" -c "wget -qO - https://raw.githubusercontent.com/deathmond1987
 if [[ $user_packages == *mc* ]]; then       
     # changing default mc theme
     echo "adding mc config"
-    echo "MC_SKIN=gotar" >> /etc/environment
-    echo "MC_SKIN=gotar" >> /home/"$USER_NAME"/.zshrc
+    # fallback MC_SKIN=gotar skin
+    MC_SKIN=modarcon16root-defbg
+    echo "MC_SKIN=$MC_SKIN" >> /etc/environment
+    echo "MC_SKIN=$MC_SKIN" >> /home/"$USER_NAME"/.zshrc
 fi
 # enabling hstr alias
 echo "export HISTFILE=~/.zsh_history" >> /home/"$USER_NAME"/.zshrc
