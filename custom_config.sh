@@ -122,9 +122,10 @@ for project in ${PROJECT_LIST}; do
         cd - &>/dev/null
     else
         git clone -q "${project}"
-    fi
+    fi 
     echo "[ $project_name ] done."
 done
+chown -R $USER_NAME:$USER_NAME ./.git 
 
 # enabling units
 systemctl enable docker.service
