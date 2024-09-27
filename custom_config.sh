@@ -127,6 +127,7 @@ for project in ${PROJECT_LIST}; do
     fi 
     echo "[ $project_name ] done."
 done
+cd ..
 chown -R $USER_NAME:$USER_NAME ./.git 
 
 # enabling units
