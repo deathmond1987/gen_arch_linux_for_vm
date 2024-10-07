@@ -75,6 +75,18 @@ sed -i 's/OPTIONS=(strip docs !libtool !staticlibs emptydirs zipman purge debug 
                          yay -Y --devel --save && \
                          yay --editmenu --diffmenu=false --save"
 
+## IMPORTANT NOTE ABOUT VULKAN ON WSL2!!! ##
+## ArchWSL2 may not properly load the Intel WSL driver by default which makes it impossible to use the D3D12 driver on Intel graphics cards. 
+## This is because the Intel WSL driver files link against libraries that do not exist in Archlinux. 
+## You can manually fix this issue using ldd to see which libraries they are linked,
+## eg: ldd /usr/lib/wsl/drivers/iigd_dch_d.inf_amd64_49b17bc90a910771/*.so, 
+## and then try installing the libraries marked not found from the Archlinux package repository. 
+## If the corresponding library file is not found in the package repository, it may be that the version suffix of the library file is different, 
+## such as libedit.so.0.0.68 and libedit.so.2. In such a case, you can try to create a symlink.
+## https://github.com/sileshn/ArchWSL2
+## libedit is /usr/lib/libedit.so.0.0.72 (72 for now)
+## libigdgmm.so.12 in intel-media-driver package
+
 # installing packages 
 su - "$USER_NAME" -c "yay -S $yay_opts $user_packages"
 if [[ $user_packages == *docker* ]]; then
