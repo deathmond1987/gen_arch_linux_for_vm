@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # POC
-# fully working arch linux builded from RHEL-like command line on RAW IMAGE
+# fully working arch linux builded from command line on RAW IMAGE
 # with uefi, grub, root partition in lvm with ext4, oh-my-zsh and modern apps
 #
 # Полностью работоспособный arch linux установленный из rhel, debian и alpine дистрибутивов.
