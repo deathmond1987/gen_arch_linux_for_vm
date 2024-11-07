@@ -8,7 +8,7 @@
 # Кофигурация включает в себя uefi grub агрузчик, корневой раздел на lvm в ext4,
 # предустановленный oh-my-zsh и некоторые замены в системных приложениях .
 #
-# в репозиториях fedora есть все для устновки arch в chroot: pacstrap, pacman,genfstab,
+# в репозиториях fedora есть все для установки arch в chroot: pacstrap, pacman,genfstab,
 # arch-chroot (в пакете arch-install-scripts), archlinux-keyring - отдельно.
 # При помощи этого набора через pacstrap устанавливается в /mnt/arch новый корень с arch,
 # происходит chroot туда и уже оттуда донастраивается.
