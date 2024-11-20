@@ -148,10 +148,10 @@ qsb() {
 EOF
        
 ## downloading tor fork for docker
-#cd /opt
-#git clone https://github.com/deathmond1987/tor_with_bridges.git
-#mv ./tor_with_bridges ./tor
-#cd -
+cd /opt
+git clone https://github.com/deathmond1987/tor_with_bridges.git
+mv ./tor_with_bridges ./tor
+cd -
 
 ## clone my gh repo
 cd /home/"$USER_NAME"/
