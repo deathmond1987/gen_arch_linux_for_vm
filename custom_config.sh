@@ -8,7 +8,7 @@ user_packages='docker docker-compose dive docker-buildx \
                qemu-base \
                pacman-contrib pacman-cleanup-hook \
                mc pigz polkit strace bc bc net-tools cpio etc-update ccache \
-               ripgrep-all fzf bat-extra'
+               ripgrep-all fzf bat-extras'
 
 ############## NEED TO ADD --disable-sandbox when flag will be in yay release ##################
 yay_opts='--answerdiff None --answerclean None --noconfirm --needed'
