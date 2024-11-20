@@ -816,7 +816,7 @@ run_in_qemu () {
     if [ "$ID" = "fedora" ] || [ "$ID" = "debian" ] || [ "$ID" = "alpine" ] ; then
         OVMF_PATH=/usr/share/OVMF/OVMF_CODE.fd
     elif [ "$ID" = "arch" ]; then
-        OVMF_PATH=/usr/share/edk2/x64/OVMF_CODE.fd
+        OVMF_PATH=/usr/share/edk2/x64/OVMF_CODE.4m.fd
     else
         echo "Unknown OS"
     fi
