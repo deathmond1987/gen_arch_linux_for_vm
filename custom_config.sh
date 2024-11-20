@@ -127,7 +127,7 @@ echo 'alias mc="SHELL=/bin/bash /usr/bin/mc; zsh"' >> /home/"$USER_NAME"/.zshrc
 #echo 'alias netstat="ss"' >> /home/kosh/.zshrc
 
 ## fzf text search 
-echo '
+cat << 'EOF' >> /home/"$USER_NAME"/.zshrc
 export BAT_THEME="Monokai Extended"
 qsb() {
         RG_PREFIX="rg --files-with-matches"
@@ -144,7 +144,8 @@ qsb() {
                         --preview-window="70%:wrap"
         )" &&
         echo "$file"
-}' >> /home/"$USER_NAME"/.zshrc
+}
+EOF
        
 ## downloading tor fork for docker
 #cd /opt
