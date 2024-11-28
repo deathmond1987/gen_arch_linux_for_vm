@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
+set -x
 . /etc/environment
 
 USER_NAME=${USER_NAME:-kosh}
