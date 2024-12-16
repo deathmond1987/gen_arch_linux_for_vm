@@ -40,17 +40,26 @@
 # debootstrap --include=sudo,nano,wget buster /mnt/debian  http://deb.debian.org/debian
 
 
-
+## пакеты необходимные для сборки в разных дистрибутивах
+## rhel like
 rh_deps='arch-install-scripts e2fsprogs dosfstools lvm2'
+## arch linux
 arch_deps='lvm2 dosfstools arch-install-scripts e2fsprogs'
+## debian like
 deb_deps='arch-install-scripts e2fsprogs dosfstools lvm2'
+## alpine linux
 alpine_deps='pacman arch-install-scripts losetup dosfstools lvm2 e2fsprogs findmnt gawk grep lsblk'
+## pacman options for install packages
 export pacman_opts='--needed --disable-download-timeout --noconfirm --disable-sandbox'
+## additional packages installed in arch linux image
 export system_packages='lvm2 wget openssh grub efibootmgr parted networkmanager modemmanager usb_modeswitch'
+
+
 set -oe noglob
 # set -x 
-reset="\033[0m"
 
+## color and output 
+reset="\033[0m"
 red="\033[0;31m"
 green="\033[0;32m"
 white="\033[0;37m"
@@ -65,10 +74,11 @@ error() { >&2 printf "${red}✖ %s${reset}\n" "$@"
 warn() { printf "${tan}➜ %s${reset}\n" "$@"
 }
 
-# source distrib info
+## source distrib info
 . /etc/os-release
-# path where we build new arch linux system
+## path where we build new arch linux system
 MOUNT_PATH=/mnt/arch
+## build image name
 IMG_NAME=vhd
 
 
@@ -133,6 +143,7 @@ options_handler () {
         shift
     done
 
+    ## set user and password options with default values
     USER_NAME=${USER_NAME:=kosh}
     PASSWORD=${PASSWORD:=qwe}
 
@@ -169,15 +180,15 @@ options_handler () {
 ############################### PREPARE HOST TO BUILD IMAGE ################################
 ############################################################################################
 prepare_dependecies () {
+    ## installing dependencies
+    ## arch-install-scripts - pacman and dependencies
+    ## e2fsprogs - for making fs in image
+    ## dosfstools - for making fat32 fs in image
+    ## qemu-kvm-core - for run builded image in qemu-kvm
+    ## edk2-ovmf - uefi bios for run image in qemu with uefi
+    ## shellcheck disable=SC2086
     if [ "$ID" = "fedora" ]; then
         success "Installing dependencies for fedora..."
-        # installing dependencies
-        # arch-install-scripts - pacman and dependencies
-        # e2fsprogs - for making fs in image
-        # dosfstools - for making fat32 fs in image
-        # qemu-kvm-core - for run builded image in qemu-kvm
-        # edk2-ovmf - uefi bios for run image in qemu with uefi
-        # shellcheck disable=SC2086
         dnf install -y $rh_deps
     elif [ "$ID" = "arch" ]; then
         success "Installing dependencies for arch..."
@@ -188,9 +199,11 @@ prepare_dependecies () {
         apt install -y $deb_deps
     elif [ "$ID" = "alpine" ]; then
         success "Installing dependencies for alpine..."
-        # we need to install coreutils programs. losetup, findmnt, lsblk, gawk, grep
+        ## alpine use busybox
+        ## we need to install coreutils programs. losetup, findmnt, lsblk, gawk, grep
         apk add $alpine_deps
     else
+        ## exit if distro not known for script
         error "This script not working in: $ID"
         exit 1
     fi
@@ -198,9 +211,10 @@ prepare_dependecies () {
 
 create_image_wsl () {
     success "Creating image for wsl..."
-    # creating empty image
+    ## creating empty image
     dd if=/dev/zero of=./"$IMG_NAME".img bs=1M count=10000 status=progress
     success "Formatting image for wsl..."
+    ## for wsl we just create gpt table and simple partition
     fdisk ./"$IMG_NAME".img <<-EOF
         g
         n
@@ -215,12 +229,12 @@ EOF
 
 create_image () {
     success "Creating image..."
-    # creating empty image
+    ## creating empty image
     dd if=/dev/zero of=./"$IMG_NAME".img bs=1M count=10000 status=progress
-    # creating in image gpt table and 3 partitions
-    # first one - EFI partinion. we will mount it to /boot/efi later with filesystem fat32
-    # second one - "boot" partition. we will mount it to /boot later with filesystem fat32
-    # third one - "root" partition. we will mount it to / later with lvm and ext4 partition
+    ## creating gpt table in image and 3 partitions
+    ## first one - EFI partinion. we will mount it to /boot/efi later with filesystem fat32
+    ## second one - "boot" partition. we will mount it to /boot later with filesystem fat32
+    ## third one - "root" partition. we will mount it to / later with lvm and ext4 partition
     fdisk ./"$IMG_NAME".img <<-EOF
         g
         n
@@ -250,35 +264,49 @@ EOF
 mount_image () {
 
     success "Mounting image..."
-    # mount img file to loop to interact with created partitions
-    # they will be available in /dev/loop_loop-number_partition-number
-    # like /dev/loop0p1 or /dev/loop20p3
+    ## mount img file to loop to interact with created partitions
+    ## they will be available in /dev/loop_loop-number_partition-number
+    ## like /dev/loop0p1 or /dev/loop20p3
     DISK=$(losetup -P -f --show "$IMG_NAME".img)
     export DISK
 }
 
 exit_trap_wsl () {
-    # if script fail - we need to umnount all mounts to clear host machine
-    # hmm. I can not use fuser to force unmount. This chashing wsl2
+    ## if script fail - we need to umnount all mounts to clear host machine
+    ## hmm. I can not use fuser to force unmount. This chashing wsl2
     on_exit () {
+        ## show that trap started
         error "trap start"
+        ## gpg agent working in background and prevents unmount
+        ## kill him
         pkill -en gpg-agent || true
+        ## unmount
         umount "$MOUNT_PATH" || true
+        ## remove image from lo
         losetup -d "$DISK" || true
+        ## tell that trap ended
         error "trap finished"
     }
+    ## set trap
     trap "on_exit" EXIT
 }
 
 exit_trap () {
-    # if script fail - we need to umnount all mounts to clear host machine
+    ## if script fail - we need to umnount all mounts to clear host machine
     on_exit () {
+        ## similar to wsl
+        ## kill gpg agent
         pkill -en gpg-agent || true
         sync
+        ## unmount efi partition
         umount "$MOUNT_PATH"/boot/efi || true
+        ## unmount boot partition
         umount "$MOUNT_PATH"/boot || true
+        ## unmount root partition
         umount "$MOUNT_PATH" || true
+        ## remove root partition from host lvm
         lvchange -an /dev/arch/root || true
+        ## remove disk from lo
         losetup -d "$DISK" || true
         error "trap finished"
     }
@@ -287,81 +315,85 @@ exit_trap () {
 
 format_image_wsl () {
     success "Formatting partition..."
+    ## format partition in ext4
     mkfs.ext4 "$DISK"p1
 }
 
 format_image () {
     success "Formatting partitions..."
-    # formatting boot partition
+    ## formatting boot partition
     mkfs.fat -F 32 "$DISK"p1
-    # formatting efi partition
+    ## formatting efi partition
     mkfs.fat -F 32 "$DISK"p2
-    # creating root pv
+    ## creating root pv
     pvcreate "$DISK"p3
-    # creating root vg
+    ## creating root vg
     vgcreate arch "$DISK"p3
-    # creating root lv
-    # fuck debian with custom lvm2 and udev
+    ## fuck debian with custom lvm2 and udev
     if [ "$ID" = "debian" ]; then
         error "If you wee error below - you should blame Debian"
     fi
+    ## creating root lv
     lvcreate -l 100%FREE arch -n root
-    # formatting root lv
+    ## formatting root lv
     mkfs.ext4 /dev/arch/root
 }
 
 mkdir_root () {
     success "Mount root tree"
-    # create mount dirs
+    ## create mount dirs
     mkdir -p "$MOUNT_PATH"
 }
 
 mount_root_wsl () {
-    # mount formatted root disk to /
-        mount "$DISK"p1 "$MOUNT_PATH"
+    ## mount formatted root disk to /
+    mount "$DISK"p1 "$MOUNT_PATH"
 }
 
 mount_root () {
-    # mount formatted lvm disk to /
+    ## mount formatted lvm disk to /
     mount /dev/arch/root "$MOUNT_PATH"
 }
 
 pacstrap_base () {
+    ## костыль...
     OLD_ID=$ID
+    ## in debian we use arch linux image for install
+    ## so we use debian method for wsl build
     if [ "$WSL_INSTALL" = "true" ]; then
         ID=debian
     fi
     if [ "$ID" = "fedora" ] || [ "$ID" = "arch" ]; then
         success "Initializing pacman..."
-        # initialize keyring and load archlinux keys for host pacman
+        ## initialize keyring and load archlinux keys for host pacman
         pacman-key --init
         pacman-key --populate archlinux
         success "Install base files..."
-        # installing base arch files and devel apps
+        ## installing base arch files and devel apps
         pacstrap -K "$MOUNT_PATH" base base-devel dbus-broker-units
 
     elif [ "$ID" = "debian" ] || [ "$ID" = "ubuntu" ]; then
         success "Download bootstrap arch archive..."
-        # installing base arch files and devel apps
-        # in debian arch-install-scripts package thereis no pacstrap script, so...
-        # we can wget pacstrap script from net or...
-        # ...full bootstrap image... for example
+        ## installing base arch files and devel apps
+        ## in debian arch-install-scripts package thereis no pacstrap script, so...
+        ## we can wget pacstrap script from net or...
+        ## ...full bootstrap image... for example
         cd "$MOUNT_PATH"
-        #donwloading tar archive with bootstrap image to build dir
+        ## donwloading tar archive with bootstrap image to build dir
         wget -qO archlinux.tar.gz https://geo.mirror.pkgbuild.com/iso/latest/archlinux-bootstrap-x86_64.tar.zst
-        #extracting archive in current dir with cut root dir
+        ## extracting archive in current dir with cut root dir
         tar --zstd -xf ./archlinux.tar.gz --numeric-owner --strip-components=1
-        #chrooting to bootstrap root
+        ## chrooting to bootstrap root
         success "Init pacman from base image system..."
         arch-chroot "$MOUNT_PATH" <<-EOF
-            #usually pacstrap script populating keys but we doing it manually
+            ## usually pacstrap script populating keys but we doing it manually
             pacman-key --init
             pacman-key --populate archlinux
-            #configuring mirrorlist
+            ## configuring mirrorlist
             sed -i 's/#Server =/Server =/g' /etc/pacman.d/mirrorlist
-            #installing root
+            ## installing root
             pacman -Syu $pacman_opts base base-devel dbus-broker-units
-            #ckeaning up root dir. thereis tar archive, list installed packages in root and version file.
+            ## cleaning up root dir. thereis tar archive, list installed packages in root and version file.
             rm -f /archlinux.tar.gz
             rm -f /pkglist.x86_64.txt
             rm -f /version
@@ -370,8 +402,8 @@ EOF
 
     elif [ "$ID" = "alpine" ]; then
         success "Init pacman from Alpine system"
-        #pacman in alpine has no configured repositories
-        #and it has no archlinux-keyring in repo, so temporary disabling PGP check to install base packages before chroot
+        ## pacman in alpine has no configured repositories
+        ## and it has no archlinux-keyring in repo, so temporary disabling PGP check to install base packages before chroot
         echo "
 [core]
 SigLevel = Never
@@ -384,10 +416,10 @@ Include = /etc/pacman.d/mirrorlist
 [extra]
 SigLevel = Never
 Include = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
-        #...and no mirrorlist
+        ## ...and no mirrorlist
         mkdir -p /etc/pacman.d
         wget -O /etc/pacman.d/mirrorlist https://archlinux.org/mirrorlist/all/http/
-        #configuring mirrors
+        ## configuring mirrors
         sed -i 's/#Server =/Server =/g' /etc/pacman.d/mirrorlist
         pacstrap -K "$MOUNT_PATH" base base-devel dbus-broker-units
 
@@ -399,22 +431,24 @@ Include = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
 
 mount_boot () {
     success "Mounting partitions..."
-    # mount boot partition
+    ## mount boot partition
     mount "$DISK"p2 "$MOUNT_PATH"/boot
-    # creating dir for efi
+    ## creating dir for efi
     mkdir -p "$MOUNT_PATH"/boot/efi
-    # mount efi partition
+    ## mount efi partition
     mount "$DISK"p1 "$MOUNT_PATH"/boot/efi
 }
 
 disable_swap () {
-    # if we not remove swap from host machine he will appear in arch fstab
+    ## if we not remove swap from host machine he will appear in arch fstab
+    ## TODO: automount after script finished!?
     swapoff -a
 }
 
 fstab_gen () {
-    # partition tree finished. generating fstab
+    ## partition tree finished. generating fstab
     genfstab -P -U -t PARTUUID "$MOUNT_PATH" | grep -v "^$DISK" > "$MOUNT_PATH"/etc/fstab
+    ## show generated fstab
     cat "$MOUNT_PATH"/etc/fstab
 }
 
@@ -423,38 +457,42 @@ fstab_gen () {
 ############################################################################################
 chroot_arch () {
     success "Chrooting arch-linux..."
-    # tell the environment that this is install for wsl
+    ## tell the environment that this is install for wsl
     echo "WSL_INSTALL=$WSL_INSTALL" >> "$MOUNT_PATH"/etc/environment
-    # tell the environment about unnessesary config
+    ## tell the environment about unnessesary config
     echo "WITH_CONFIG=$WITH_CONFIG" >> "$MOUNT_PATH"/etc/environment
     echo "USER_NAME=$USER_NAME" >> "$MOUNT_PATH"/etc/environment
     echo "PASSWORD=$PASSWORD" >> "$MOUNT_PATH"/etc/environment
 
-    # go to arch
+    ## go to arch
     arch-chroot "$MOUNT_PATH" <<-EOF
         #!/usr/bin/env bash
-        set -e
-        set -x 
+        #set -x
+        set -e 
 
         base_image_config_wsl () {
-            # in current archiso not installed needed packages: sudo fakeroot strip (binutils). WHAT?!
-            # so, we install default base and base-devel packages
+            ## in current archiso not installed needed packages: sudo fakeroot strip (binutils). WHAT?!
+            ## so, we install default base and base-devel packages
             pacman -Syu --noconfirm --needed
+            ## installing base and base-devel packages
+            ## this is metapackages:
+            ## base - minimal arch linux packages
+            ## base-devel - packages for build other packages 
             pacman -S $pacman_opts base base-devel
         }
 
         sudo_config () {
-            # temporary disabling ask password for yay
+            ## temporary disabling ask password for yay
             sed -i 's/# %wheel ALL=(ALL:ALL) NOPASSWD: ALL/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /etc/sudoers
         }
 
         mkinitcpio_install () {
-            # install mkinitcpio
+            ## install mkinitcpio
             pacman -S $pacman_opts mkinitcpio
         }
 
         remove_autodetect_hook () {
-            # to run arch in most any environment we need build init image with all we can add to it
+            ## to run arch in most any environment we need build init image with all we can add to it
             MKINIT_CONF_PATH=/etc/mkinitcpio.conf
             DEFAULT_HOOKS="HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block filesystems fsck)"
             NEW_HOOKS="HOOKS=(base udev microcode systemd modconf kms keyboard keymap consolefont block lvm2 filesystems fsck)"
@@ -469,26 +507,26 @@ chroot_arch () {
         }
 
         kernel_install () {
-            # installing kernel and firmware
+            ## installing kernel and firmware
             pacman -S $pacman_opts linux-zen linux-zen-headers linux-firmware
         }
 
-        #we can not use systemd to configure locales, time and so on cause we are in chroot environment
+        ## we can not use systemd to configure locales, time and so on cause we are in chroot environment
         time_config () {
-            # config localtime
+            ## config localtime
             ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime
         }
 
         locale_config () {
-            # add locales
+            ## add locales
             sed -i 's/#ru_RU.UTF-8 UTF-8/ru_RU.UTF-8 UTF-8/g' /etc/locale.gen
             sed -i 's/#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g' /etc/locale.gen
-            # generating locale
+            ## generating locale
             locale-gen
         }
 
         language_config () {
-            # set default language
+            ## set default language
             echo -e 'LANG=en_US.UTF-8
 LANGUAGE=en_US.UTF-8
 LC_ADDRESS=en_US.UTF-8
@@ -506,27 +544,27 @@ LC_TIME=en_US.UTF-8' > /etc/locale.conf
         }
 
         hostname_config () {
-            # set hostname
+            ## set hostname
             echo 'home' > /etc/hostname
             echo '127.0.0.1 home' >> /etc/hosts
         }
 
         user_config () {
-            # create user and add it to wheel group
+            ## create user and add it to wheel group
             useradd -m -G wheel -s /bin/bash "$USER_NAME"
-            # changing password
+            ## changing password
             echo "root:$PASSWORD" |chpasswd
             echo "$USER_NAME:$PASSWORD" |chpasswd
             #usermod -s /usr/bin/bash root
         }
 
         git_install () {
-            # adding git
+            ## adding git
             pacman -S $pacman_opts git
         }
 
         apps_install () {
-            # installing needed packages to working properly
+            ## installing needed packages to working properly
             pacman -S $pacman_opts $system_packages
             systemctl enable NetworkManager
             systemctl enable ModemManager
@@ -535,7 +573,7 @@ LC_TIME=en_US.UTF-8' > /etc/locale.conf
         }
 
         grub_install () {
-            # installing grub. extra config needed because we dont have efivars in container
+            ## installing grub. extra config needed because we dont have efivars in container
             mkdir -p /boot/efi
             grub-install \
                 --target=x86_64-efi \
@@ -547,7 +585,7 @@ LC_TIME=en_US.UTF-8' > /etc/locale.conf
         }
 
         other_config () {
-            # my personal config
+            ## my personal config
             if [ "$WITH_CONFIG" = "true" ]; then
                 wget -O - "https://raw.githubusercontent.com/deathmond1987/gen_arch_linux_for_vm/main/custom_config.sh" | bash
             fi
@@ -570,11 +608,11 @@ LC_TIME=en_US.UTF-8' > /etc/locale.conf
             other_config
         else
 
-            # wsl is container so we need minimal install to work in wsl
-            # do not need:
-            # mkinitcpio (cause thereis no kernel)
-            # kernel (cause container using wsl kernel)
-            # grub (cause thereis no bios or uefi)
+            ## wsl is container so we need minimal install to work in wsl
+            ## do not need:
+            ## mkinitcpio (cause thereis no kernel)
+            ## kernel (cause container using wsl kernel)
+            ## grub (cause thereis no bios or uefi)
             base_image_config_wsl
             sudo_config
             time_config
@@ -596,18 +634,18 @@ EOF
 
 postinstall_config () {
         success "Create postinstall script for Virtual Machine..."
-        # for now we have large initramfs and strange-installed-grub.
-        # in this block we generate initrd image with autodetect hook, reinstall grub, fixing sudo permissions,
-        # resizing partition / to full disk and creating swap
-        # after that remove this helper script
+        ## for now we have large initramfs and strange-installed-grub.
+        ## in this block we generate initrd image with autodetect hook, reinstall grub, fixing sudo permissions,
+        ## resizing partition / to full disk and creating swap
+        ## after that remove this helper script
 
-        # adding this script to autoboot after first load arch linux
+        ## adding this script to autoboot after first load arch linux
         if [ "$WITH_CONFIG" = "true" ]; then
             sed -i "1s#^#sudo /home/$USER_NAME/postinstall.sh\n#" "$MOUNT_PATH"/home/$USER_NAME/.zshrc
         else
             sed -i "1s#^#sudo /home/$USER_NAME/postinstall.sh\n#" "$MOUNT_PATH"/home/$USER_NAME/.bashrc
         fi
-        # script body
+        ## script body
         cat <<'EOL' >> "$MOUNT_PATH"/home/$USER_NAME/postinstall.sh
             #!/usr/bin/env bash
             set -xe
@@ -616,7 +654,7 @@ postinstall_config () {
                 ######################################################################################################
                 ######################################### HOST #######################################################
                 ######################################################################################################
-                # if this real host and we have internet - we will install vendor blobs for processor
+                ## if this real host and we have internet - we will install vendor blobs for processor
                 if timeout 6 curl --head --silent --output /dev/null https://hub.docker.com; then
                     if ! systemd-detect-virt -q; then
                         vendor=$(lscpu | awk '/Vendor ID/{print $3}'| head -1)
@@ -637,73 +675,73 @@ postinstall_config () {
                     fi
                 fi
 
-                # adding autodetect hook to mkinicpio to generate default arch init image
+                ## adding autodetect hook to mkinicpio to generate default arch init image
                 sed -i 's/HOOKS=(base udev microcode systemd modconf kms keyboard keymap consolefont block lvm2 filesystems fsck)/HOOKS=(base systemd autodetect modconf kms keyboard keymap consolefont block lvm2 filesystems fsck)/g' /etc/mkinitcpio.conf
-                # creating initrd image
+                ## creating initrd image
                 mkinitcpio -P
 
-                # reinstalling grub
+                ## reinstalling grub
                 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
                 grub-mkconfig -o /boot/grub/grub.cfg
 
-                # check memory available
+                ## check memory available
                 memory=$(free -m | grep Mem | awk '{print $2}')
-                # creating swap file with size equal to memory
+                ## creating swap file with size equal to memory
                 dd if=/dev/zero of=/swapfile bs=1M count=$memory
-                # changing swap file permissions
+                ## changing swap file permissions
                 chmod 0600 /swapfile
-                # formatting swap file
+                ## formatting swap file
                 mkswap -U clear /swapfile
-                # enabling swap
+                ## enabling swap
                 swapon /swapfile
-                # adding swap file entry to fstab to automount
+                ## adding swap file entry to fstab to automount
                 echo "/swapfile none swap defaults 0 0" >> /etc/fstab
                 echo "done"
 
-                # default disk size in this script 10G
-                # after install we want to use all disk space
+                ## default disk size in this script 10G
+                ## after install we want to use all disk space
                 ####################################
                 ## x-systemd.growfs in /etc/fstab ##
                 ####################################
                 echo resizing disk
-                # searching name of partition with mounted root FS
+                ## searching name of partition with mounted root FS
                 ROOT_PARTITION=$(sudo pvs | grep arch | awk '{print $1}')
-                # searching disk name with founded root partition
+                ## searching disk name with founded root partition
                 ROOT_DISK=$(lsblk -n -o NAME,PKNAME -f "$ROOT_PARTITION" | awk '{ print $2 }' | head -1)
-                # adding all free disk space on founded disk to root FS partition
+                ## adding all free disk space on founded disk to root FS partition
                 echo ", +" | sfdisk -N 3 /dev/"$ROOT_DISK" --force
-                # reloading hard disk info
+                ## reloading hard disk info
                 partprobe
 
-                # we have lvm on root partition. after resizing disk we need add new space to lvm
-                # extend physical volume to use all free space on partition
+                ## we have lvm on root partition. after resizing disk we need add new space to lvm
+                ## extend physical volume to use all free space on partition
                 pvresize "$ROOT_PARTITION"
-                # extend logical volume to use all free space from physical volume
+                ## extend logical volume to use all free space from physical volume
                 lvextend -l +100%FREE /dev/arch/root || true
-                # we have ext4 fs on lvm. resizing ext4 fs
+                ## we have ext4 fs on lvm. resizing ext4 fs
                 resize2fs /dev/arch/root || true
 
             fi
-            # removing helper script from autoload
+            ## removing helper script from autoload
             if [ "$WITH_CONFIG" = "true" ]; then
                 sed -i '1d' /home/$USER_NAME/.zshrc
             else
                 sed -i '1d' /home/$USER_NAME/.bashrc
             fi
-            # removing helper script itself
+            ## removing helper script itself
             rm /home/$USER_NAME/postinstall.sh
 
-            #cleanup env file
+            ## cleanup env file
             sed -i '/^PASSWORD/d' /etc/environment
             sed -i '/^USER_NAME/d' /etc/environment
 
-            # changing sudo rules to disable executing sudo without password
+            ## changing sudo rules to disable executing sudo without password
             sed -i 's/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/# %wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /etc/sudoers
-            # allow wheel group using sudo with password
+            ## allow wheel group using sudo with password
             sed -i 's/# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/g' /etc/sudoers
 
             if  [ "$WSL_INSTALL" = "false" ]; then
-                # rebooting OS after reconfiguring
+                ## rebooting OS after reconfiguring
                 sudo reboot
             else
                 cd /opt/tor
@@ -711,7 +749,7 @@ postinstall_config () {
                 cd -
             fi
 EOL
-        # marking helper script executable
+        ## marking helper script executable
         chmod 777 "$MOUNT_PATH"/home/$USER_NAME/postinstall.sh
         arch-chroot "$MOUNT_PATH" <<-EOF
         if [ "$WITH_CONFIG" = "true" ]; then
@@ -725,8 +763,8 @@ EOF
 }
 
 export_wsl () {
-    # unmount all mounts
-    # we need this to stop grub in vm dropping in grub-shell due first run
+    ## unmount all mounts
+    ## we need this to stop grub in vm dropping in grub-shell due first run
     success "Taring rootfs and unmount partitions..."
     tar -cf ./archfs.tar -C /mnt/arch .
     success "ARCH root filesystem exported to $PWD/archfs.tar"
@@ -753,7 +791,7 @@ unmount_wsl () {
 unmount_images () {
     pkill -en gpg-agent 1>/dev/null || true
     sync
-    #fuser killer may kill wsl...
+    ## fuser killer may kill wsl...
     umount -l "$MOUNT_PATH"/boot/efi || true
     umount -l "$MOUNT_PATH"/boot || true
     umount -l "$MOUNT_PATH" || true
@@ -763,7 +801,7 @@ unmount_images () {
 }
 
 qemu_install () {
-    # install packages for --qemu
+    ## install packages for --qemu
     if [ "$ID" = "fedora" ]; then
             dnf install -y qemu-kvm-core \
                            edk2-ovmf
@@ -788,7 +826,7 @@ qemu_install () {
 }
 
 export_image_hyperv () {
-    # convert img to hyperv
+    ## convert img to hyperv
     qemu-img resize -f raw ./"$IMG_NAME".img 11G
     qemu-img convert -p -f raw -O vhdx ./"$IMG_NAME".img ./"$IMG_NAME".vhdx
     echo ""
@@ -800,7 +838,7 @@ export_image_hyperv () {
 }
 
 export_image_wmware () {
-    # convert img to vmware
+    ## convert img to vmware
     qemu-img resize -f raw ./"$IMG_NAME".img 11G
     qemu-img convert -p -f raw -O vmdk ./"$IMG_NAME".img ./"$IMG_NAME".vmdk
     echo ""
@@ -812,7 +850,7 @@ export_image_wmware () {
 }
 
 run_in_qemu () {
-    # set path to OVMF file
+    ## set path to OVMF file
     if [ "$ID" = "fedora" ] || [ "$ID" = "debian" ] || [ "$ID" = "alpine" ] ; then
         OVMF_PATH=/usr/share/OVMF/OVMF_CODE.fd
     elif [ "$ID" = "arch" ]; then
@@ -820,15 +858,15 @@ run_in_qemu () {
     else
         echo "Unknown OS"
     fi
-    # if qemu pid exist - kill it
+    ## if qemu pid exist - kill it
     if ps -aux | grep -v grep | grep file=./"$IMG_NAME"-test-qemu.img >/dev/null 2>&1; then
         warn "test image already used. killing process..."
         kill "$(ps -aux | grep -v grep | grep file=./"$IMG_NAME"-test-qemu.img | awk '{print $2}')"
     fi
     warn "Creating img clone to run in qemu..."
-    # create img copy for test in qemu
+    ## create img copy for test in qemu
     cp ./"$IMG_NAME".img ./"$IMG_NAME"-test-qemu.img
-    # run qemu
+    ## run qemu
     qemu-system-x86_64 \
         -enable-kvm \
         -smp cores=4 \
