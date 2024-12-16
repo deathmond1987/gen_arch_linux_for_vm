@@ -19,15 +19,15 @@ if [ "$WSL_INSTALL" = "true" ]; then
 systemd=true
 [user]
 default=$USER_NAME
-[automount]
-enabled = true
-options = \"metadata\"
-mountFsTab = true
-[interop]
-appendWindowsPath = false
-autoMemoryReclaim=gradual
-networkingMode=mirrored
-dnsTunneling=true" > /etc/wsl.conf
+#[automount]
+#enabled = true
+#options = \"metadata\"
+#mountFsTab = true
+#[interop]
+#appendWindowsPath = false
+#autoMemoryReclaim=gradual
+#networkingMode=mirrored
+#dnsTunneling=true" > /etc/wsl.conf
     rm -f /etc/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service
     rm -f /usr/lib/systemd/system/systemd-firstboot.service
     echo "" > /etc/fstab
