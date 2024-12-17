@@ -442,7 +442,7 @@ mount_boot () {
 disable_swap () {
     ## if we not remove swap from host machine he will appear in arch fstab
     ## TODO: automount after script finished!?
-    swapoff -a
+    swapoff -a || true
 }
 
 fstab_gen () {
