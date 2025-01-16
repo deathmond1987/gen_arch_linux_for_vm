@@ -6,7 +6,7 @@ set -x
 USER_NAME=${USER_NAME:-kosh}
 user_packages='docker docker-compose dive docker-buildx \
                qemu-base \
-               pacman-contrib pacman-cleanup-hook \
+               pacman-contrib pacman-cleanup-hook downgrade\
                mc pigz polkit strace bc net-tools cpio etc-update ccache \
                ripgrep-all fzf bat-extras'
 
