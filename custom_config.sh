@@ -121,10 +121,12 @@ if [[ $user_packages == *mc* ]]; then
 fi
 ## enabling hstr alias
 echo "export HISTFILE=~/.zsh_history" >> /home/"$USER_NAME"/.zshrc
-## workaround slow mc start. long time to create subshell for mc. we will load mc from bash
-#echo 'alias mc="SHELL=/bin/bash /usr/bin/mc; zsh"' >> /home/"$USER_NAME"/.zshrc
-## habit
-#echo 'alias netstat="ss"' >> /home/kosh/.zshrc
+
+## change default zsh compilation dump to .config/zsh to avoid create compdump files in home dir
+sed -i '1 i\## export ZDOTDIR=$HOME/.config/zsh' "$HOME"/.zshrc
+mkdir -p "$HOME"/.config/zsh
+
+
 
 ## fzf text search 
 cat << 'EOF' >> /home/"$USER_NAME"/.zshrc
