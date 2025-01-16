@@ -122,7 +122,7 @@ fi
 ## enabling hstr alias
 echo "export HISTFILE=~/.zsh_history" >> /home/"$USER_NAME"/.zshrc
 ## workaround slow mc start. long time to create subshell for mc. we will load mc from bash
-echo 'alias mc="SHELL=/bin/bash /usr/bin/mc; zsh"' >> /home/"$USER_NAME"/.zshrc
+#echo 'alias mc="SHELL=/bin/bash /usr/bin/mc; zsh"' >> /home/"$USER_NAME"/.zshrc
 ## habit
 #echo 'alias netstat="ss"' >> /home/kosh/.zshrc
 
