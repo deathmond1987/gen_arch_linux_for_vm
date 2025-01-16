@@ -123,8 +123,7 @@ fi
 echo "export HISTFILE=~/.zsh_history" >> /home/"$USER_NAME"/.zshrc
 
 ## change default zsh compilation dump to .config/zsh to avoid create compdump files in home dir
-sed -i '1 i\## export ZDOTDIR=$HOME/.config/zsh' "$HOME"/.zshrc
-mkdir -p "$HOME"/.config/zsh
+su - "$USER_NAME" -c "sed -i '1 i\## export ZDOTDIR=$HOME/.config/zsh' $HOME/.zshrc && mkdir -p "$HOME"/.config/zsh"
 
 
 
