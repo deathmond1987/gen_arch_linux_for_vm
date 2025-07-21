@@ -68,7 +68,7 @@ sed -i 's/COMPRESSZST=(zstd -c -z -q -)/COMPRESSZST=(zstd -c -z -q --threads=0 -
 ## disable build debug package 
 sed -i 's/OPTIONS=(strip docs !libtool !staticlibs emptydirs zipman purge debug lto)/OPTIONS=(strip docs !libtool !staticlibs emptydirs zipman purge !debug lto)/g' /etc/makepkg.conf
 ## use max cpu cores for builds
-sed -i 's/#MAKEFLAGS="-j2"/MAKEFLAGS="-j$(npoc)"/g' /etc/makepkg.conf
+sed -i 's/#MAKEFLAGS="-j2"/MAKEFLAGS="-j$(nproc)"/g' /etc/makepkg.conf
 
 
 ## installing yay
