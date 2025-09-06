@@ -667,13 +667,6 @@ postinstall_config () {
                             echo "cpu vendor: $vendor unknown"
                         fi
                     fi
-                    if [ "$WITH_CONFIG" = true ]; then
-                            ## now its first time when this os run in normal mode with systemd
-                            ## so we need to do all jobs with systemd dependency
-                            cd /opt/tor
-                            docker-compose up -d
-                            cd -
-                    fi
                 fi
 
                 ## adding autodetect hook to mkinicpio to generate default arch init image
