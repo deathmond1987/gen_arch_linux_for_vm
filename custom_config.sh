@@ -151,11 +151,48 @@ qsb() {
 }
 EOF
        
-## downloading tor fork for docker
-cd /opt
-git clone https://github.com/deathmond1987/tor_with_bridges.git
-mv ./tor_with_bridges ./tor
-cd -
+# ## downloading tor fork for docker
+# cd /opt
+# git clone https://github.com/deathmond1987/tor_with_bridges.git
+# mv ./tor_with_bridges ./tor
+# cd -
+
+## set ssh config
+echo 'Host *
+  ServerAliveInterval 240
+Host prox
+  Port 22
+  User kosh
+  HostName 192.168.1.88
+Host arch
+  Port 22
+  User kosh
+  HostName 192.168.1.112
+Host work
+  Port 22
+  User kosh
+  HostName 192.168.1.105
+Host nas
+  Port 22222
+  User kosh
+  HostName 192.168.1.57
+Host deck
+  Port 22
+  User deck
+  HostName 192.168.1.55
+Host vdsina
+  Port 55455
+  User root
+  HostName 77.238.241.60
+Host eternal
+  Port 55455
+  User root
+  HostName 77.246.111.104
+Host keen
+  Port 222
+  User kosh
+  HostName 192.168.1.1
+' > /home/"$USER_NAME"/.ssh/config
 
 ## clone my gh repo
 cd /home/"$USER_NAME"/
