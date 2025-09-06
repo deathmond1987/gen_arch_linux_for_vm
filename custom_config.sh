@@ -158,6 +158,9 @@ EOF
 # cd -
 
 ## set ssh config
+ssh_path="/home/"$USER_NAME"/.ssh"
+mkdir -p $ssh_path
+chmod 700 $ssh_path
 echo 'Host *
   ServerAliveInterval 240
 Host prox
@@ -192,7 +195,7 @@ Host keen
   Port 222
   User kosh
   HostName 192.168.1.1
-' > /home/"$USER_NAME"/.ssh/config
+' > $ssh_path/config
 
 ## clone my gh repo
 cd /home/"$USER_NAME"/
