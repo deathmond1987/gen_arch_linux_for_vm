@@ -54,11 +54,14 @@ export pacman_opts='--needed --disable-download-timeout --noconfirm --disable-sa
 ## additional packages installed in arch linux image
 export system_packages='lvm2 wget openssh grub efibootmgr parted networkmanager modemmanager usb_modeswitch'
 
+LV_NAME=archgen
+DEFAULT_HOOKS='base systemd autodetect microcode modconf kms keyboard keymap sd-vconsole block filesystems fsck'
+NEW_HOOKS='base systemd microcode modconf kms keyboard keymap sd-vconsole block lvm2 filesystems fsck'
 
 set -oe noglob
-# set -x 
+set -x
 
-## color and output 
+## color and output
 reset="\033[0m"
 red="\033[0;31m"
 green="\033[0;32m"
@@ -305,7 +308,7 @@ exit_trap () {
         ## unmount root partition
         umount "$MOUNT_PATH" || true
         ## remove root partition from host lvm
-        lvchange -an /dev/arch/root || true
+        lvchange -an /dev/$LV_NAME/root || true
         ## remove disk from lo
         losetup -d "$DISK" || true
         error "trap finished"
@@ -328,15 +331,15 @@ format_image () {
     ## creating root pv
     pvcreate "$DISK"p3
     ## creating root vg
-    vgcreate arch "$DISK"p3
+    vgcreate $LV_NAME "$DISK"p3
     ## fuck debian with custom lvm2 and udev
     if [ "$ID" = "debian" ]; then
         error "If you wee error below - you should blame Debian"
     fi
     ## creating root lv
-    lvcreate -l 100%FREE arch -n root
+    lvcreate -l 100%FREE $LV_NAME -n root
     ## formatting root lv
-    mkfs.ext4 /dev/arch/root
+    mkfs.ext4 /dev/$LV_NAME/root
 }
 
 mkdir_root () {
@@ -352,7 +355,7 @@ mount_root_wsl () {
 
 mount_root () {
     ## mount formatted lvm disk to /
-    mount /dev/arch/root "$MOUNT_PATH"
+    mount /dev/$LV_NAME/root "$MOUNT_PATH"
 }
 
 pacstrap_base () {
@@ -464,12 +467,15 @@ chroot_arch () {
     echo "WITH_CONFIG=$WITH_CONFIG" >> "$MOUNT_PATH"/etc/environment
     echo "USER_NAME=$USER_NAME" >> "$MOUNT_PATH"/etc/environment
     echo "PASSWORD=$PASSWORD" >> "$MOUNT_PATH"/etc/environment
-
+    echo -e "DEFAULT_HOOKS='$DEFAULT_HOOKS'" >> "$MOUNT_PATH"/etc/environment
+    echo -e "NEW_HOOKS='$NEW_HOOKS'" >> "$MOUNT_PATH"/etc/environment
+    echo "LV_NAME=$LV_NAME" >> "$MOUNT_PATH"/etc/environment
+    cat "$MOUNT_PATH"/etc/environment
     ## go to arch
     arch-chroot "$MOUNT_PATH" <<-EOF
         #!/usr/bin/env bash
         #set -x
-        set -e 
+        set -e
 
         base_image_config_wsl () {
             ## in current archiso not installed needed packages: sudo fakeroot strip (binutils). WHAT?!
@@ -478,7 +484,7 @@ chroot_arch () {
             ## installing base and base-devel packages
             ## this is metapackages:
             ## base - minimal arch linux packages
-            ## base-devel - packages for build other packages 
+            ## base-devel - packages for build other packages
             pacman -S $pacman_opts base base-devel
         }
 
@@ -493,12 +499,14 @@ chroot_arch () {
         }
 
         remove_autodetect_hook () {
+            set -x
             ## to run arch in most any environment we need build init image with all we can add to it
             MKINIT_CONF_PATH=/etc/mkinitcpio.conf
-            DEFAULT_HOOKS="HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block filesystems fsck)"
-            NEW_HOOKS="HOOKS=(base udev microcode systemd modconf kms keyboard keymap consolefont block lvm2 filesystems fsck)"
-            sed -i "s/HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block filesystems fsck)/HOOKS=(base udev microcode systemd modconf kms keyboard keymap consolefont block lvm2 filesystems fsck)/g" /etc/mkinitcpio.conf
-            if grep -qF "HOOKS=(base udev microcode systemd modconf kms keyboard keymap consolefont block lvm2 filesystems fsck)" /etc/mkinitcpio.conf; then
+
+            sed -i "s/$DEFAULT_HOOKS/$NEW_HOOKS/g" /etc/mkinitcpio.conf
+            cat /etc/mkinitcpio.conf
+            cat /etc/environment
+            if grep -qF "$NEW_HOOKS" /etc/mkinitcpio.conf; then
                 echo "mkinitcpio conf confugured"
             else
                 echo "mkinit conf failed. Looks like default conf file changed by maintainer"
@@ -670,13 +678,9 @@ postinstall_config () {
                 fi
 
                 ## adding autodetect hook to mkinicpio to generate default arch init image
-                sed -i 's/HOOKS=(base udev microcode systemd modconf kms keyboard keymap consolefont block lvm2 filesystems fsck)/HOOKS=(base systemd autodetect modconf kms keyboard keymap consolefont block lvm2 filesystems fsck)/g' /etc/mkinitcpio.conf
+                sed -i "s/$NEW_HOOKS/$DEFAULT_HOOKS lvm2/g" /etc/mkinitcpio.conf
                 ## creating initrd image
                 mkinitcpio -P
-
-                ## reinstalling grub
-                grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
-                grub-mkconfig -o /boot/grub/grub.cfg
 
                 ## check memory available
                 memory=$(free -m | grep Mem | awk '{print $2}')
@@ -699,7 +703,7 @@ postinstall_config () {
                 ####################################
                 echo resizing disk
                 ## searching name of partition with mounted root FS
-                ROOT_PARTITION=$(sudo pvs | grep arch | awk '{print $1}')
+                ROOT_PARTITION=$(sudo pvs | grep $LV_NAME | awk '{print $1}')
                 ## searching disk name with founded root partition
                 ROOT_DISK=$(lsblk -n -o NAME,PKNAME -f "$ROOT_PARTITION" | awk '{ print $2 }' | head -1)
                 ## adding all free disk space on founded disk to root FS partition
@@ -711,9 +715,12 @@ postinstall_config () {
                 ## extend physical volume to use all free space on partition
                 pvresize "$ROOT_PARTITION"
                 ## extend logical volume to use all free space from physical volume
-                lvextend -l +100%FREE /dev/arch/root || true
+                lvextend -l +100%FREE /dev/$LV_NAME/root || true
                 ## we have ext4 fs on lvm. resizing ext4 fs
-                resize2fs /dev/arch/root || true
+                resize2fs /dev/$LV_NAME/root || true
+                ## reinstalling grub
+                grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
+                grub-mkconfig -o /boot/grub/grub.cfg
 
             fi
             ## removing helper script from autoload
@@ -789,7 +796,7 @@ unmount_images () {
     umount -l "$MOUNT_PATH"/boot/efi || true
     umount -l "$MOUNT_PATH"/boot || true
     umount -l "$MOUNT_PATH" || true
-    lvchange -an /dev/arch/root || true
+    lvchange -an /dev/$LV_NAME/root || true
     losetup -d "$DISK" || true
     trap '' EXIT
 }
