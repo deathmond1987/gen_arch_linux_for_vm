@@ -162,6 +162,7 @@ EOF
 ssh_path="/home/"$USER_NAME"/.ssh"
 mkdir -p $ssh_path
 chmod 700 $ssh_path
+chown $ssh_path kosh:kosh
 echo 'Host *
   ServerAliveInterval 240
 Host prox
@@ -197,6 +198,8 @@ Host keen
   User kosh
   HostName 192.168.1.1
 ' > $ssh_path/config
+chmod 600 $ssh_path/config
+chown kosh:kosh $ssh_path/config
 
 ## clone my gh repo
 #cd /home/"$USER_NAME"/
