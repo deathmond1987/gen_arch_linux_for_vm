@@ -162,7 +162,7 @@ EOF
 ssh_path="/home/"$USER_NAME"/.ssh"
 mkdir -p $ssh_path
 chmod 700 $ssh_path
-chown $ssh_path kosh:kosh
+chown "$USER_NAME":"$USER_NAME" $ssh_path
 echo 'Host *
   ServerAliveInterval 240
 Host prox
