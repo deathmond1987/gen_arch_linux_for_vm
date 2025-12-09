@@ -683,18 +683,18 @@ postinstall_config () {
                 mkinitcpio -P
 
                 ## check memory available
-                memory=$(free -m | grep Mem | awk '{print $2}')
+                #memory=$(free -m | grep Mem | awk '{print $2}')
                 ## creating swap file with size equal to memory
-                dd if=/dev/zero of=/swapfile bs=1M count=$memory
+                #dd if=/dev/zero of=/swapfile bs=1M count=$memory
                 ## changing swap file permissions
-                chmod 0600 /swapfile
+                #chmod 0600 /swapfile
                 ## formatting swap file
-                mkswap -U clear /swapfile
+                #mkswap -U clear /swapfile
                 ## enabling swap
-                swapon /swapfile
+                #swapon /swapfile
                 ## adding swap file entry to fstab to automount
-                echo "/swapfile none swap defaults 0 0" >> /etc/fstab
-                echo "done"
+                #echo "/swapfile none swap defaults 0 0" >> /etc/fstab
+                #echo "done"
 
                 ## default disk size in this script 10G
                 ## after install we want to use all disk space
