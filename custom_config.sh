@@ -8,7 +8,10 @@ user_packages='docker docker-compose dive docker-buildx \
                qemu-base \
                pacman-contrib pacman-cleanup-hook downgrade\
                mc pigz polkit strace bc net-tools cpio etc-update ccache \
-               ripgrep-all fzf bat-extras'
+               ripgrep-all fzf bat-extras \
+               libnvidia-container nvidia-container-toolkit'
+## ollama need libnvidia-container and nvidia-container-toolkit to use in docker 
+
 
 ############## NEED TO ADD --disable-sandbox when flag will be in yay release ##################
 yay_opts='--answerdiff None --answerclean None --noconfirm --needed'
