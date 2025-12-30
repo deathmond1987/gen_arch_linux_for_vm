@@ -224,6 +224,18 @@ chown kosh:kosh $ssh_path/config
 #cd ..
 #chown -R $USER_NAME:$USER_NAME ./.git 
 
+## for ollama
+mkdir -p /etc/docker
+echo '{
+    "runtimes": {
+        "nvidia": {
+            "args": [],
+            "path": "nvidia-container-runtime"
+        }
+    }
+}' > /etc/docker/daemon.json
+
+
 ## enabling units
 systemctl enable docker.service
 systemctl enable sshd.service
