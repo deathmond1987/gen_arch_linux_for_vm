@@ -205,24 +205,24 @@ chmod 600 $ssh_path/config
 chown kosh:kosh $ssh_path/config
 
 ## clone my gh repo
-#cd /home/"$USER_NAME"/
-#mkdir -p ./.git && cd ./.git
-#GH_USER=${GH_USER:=deathmond1987}
-#PROJECT_LIST=$(curl -s https://api.github.com/users/"$GH_USER"/repos\?page\=1\&per_page\=100 | grep -e 'clone_url' | cut -d \" -f 4 | sed '/WSA/d' | xargs -L1)
-#for project in ${PROJECT_LIST}; do
-#    project_name=$(echo "${project}" | cut -d'/' -f 5)
-#    echo "[ $project_name ] start..."
-#    if [ -d ./"${project_name//.git/}" ]; then
-#        cd ./"${project_name//.git/}"
-#        git pull
-#        cd - &>/dev/null
-#    else
-#        git clone -q "${project}"
-#    fi 
-#    echo "[ $project_name ] done."
-#done
-#cd ..
-#chown -R $USER_NAME:$USER_NAME ./.git 
+cd /home/"$USER_NAME"/
+mkdir -p ./.git && cd ./.git
+GH_USER=${GH_USER:=deathmond1987}
+PROJECT_LIST=$(curl -s https://api.github.com/users/"$GH_USER"/repos\?page\=1\&per_page\=100 | grep -e 'clone_url' | cut -d \" -f 4 | sed '/WSA/d' | xargs -L1)
+for project in ${PROJECT_LIST}; do
+    project_name=$(echo "${project}" | cut -d'/' -f 5)
+    echo "[ $project_name ] start..."
+    if [ -d ./"${project_name//.git/}" ]; then
+        cd ./"${project_name//.git/}"
+        git pull
+        cd - &>/dev/null
+    else
+        git clone -q "${project}"
+    fi 
+    echo "[ $project_name ] done."
+done
+cd ..
+chown -R $USER_NAME:$USER_NAME ./.git 
 
 ## for ollama
 mkdir -p /etc/docker
