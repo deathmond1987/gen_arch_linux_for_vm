@@ -9,7 +9,7 @@ user_packages='docker docker-compose dive docker-buildx \
                pacman-contrib pacman-cleanup-hook downgrade\
                mc pigz polkit strace bc net-tools cpio etc-update ccache \
                ripgrep-all fzf bat-extras \
-               libnvidia-container nvidia-container-toolkit'
+               libnvidia-container nvidia-container-toolkit nvidia-utils'
 ## ollama need libnvidia-container and nvidia-container-toolkit to use in docker 
 
 
