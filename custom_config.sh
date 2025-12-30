@@ -8,10 +8,7 @@ user_packages='docker docker-compose dive docker-buildx \
                qemu-base \
                pacman-contrib pacman-cleanup-hook downgrade\
                mc pigz polkit strace bc net-tools cpio etc-update ccache \
-               ripgrep-all fzf bat-extras \
-               libnvidia-container nvidia-container-toolkit nvidia-utils'
-## ollama need libnvidia-container and nvidia-container-toolkit to use in docker 
-
+               ripgrep-all fzf bat-extras'
 
 ############## NEED TO ADD --disable-sandbox when flag will be in yay release ##################
 yay_opts='--answerdiff None --answerclean None --noconfirm --needed'
@@ -224,8 +221,10 @@ done
 cd ..
 chown -R $USER_NAME:$USER_NAME ./.git 
 
-## for ollama
-mkdir -p /etc/docker
+## ollama docker config
+ollama_dir=/opt/ollama
+ollama_yml_url="https://raw.githubusercontent.com/deathmond1987/home/refs/heads/main/docker-compose.yml"
+mkdir -p /etc/docker $ollama_dir
 echo '{
     "runtimes": {
         "nvidia": {
@@ -234,7 +233,8 @@ echo '{
         }
     }
 }' > /etc/docker/daemon.json
-
+yay $yay_opts libnvidia-container nvidia-container-toolkit nvidia-utils
+wget $ollama_yml_url -O $ollama_dir/docker_compose.yml
 
 ## enabling units
 systemctl enable docker.service
