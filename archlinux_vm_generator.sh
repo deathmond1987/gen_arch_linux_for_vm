@@ -768,6 +768,7 @@ export_wsl () {
     ## we need this to stop grub in vm dropping in grub-shell due first run
     success "Taring rootfs and unmount partitions..."
     tar -cf ./archfs.tar -C /mnt/arch .
+    chown "$SUDO_USER":"$SUDO_USER" ./archfs.tar
     success "ARCH root filesystem exported to $PWD/archfs.tar"
     echo ""
     warn "$(ls -l "$PWD"/archfs.tar)"
@@ -830,6 +831,7 @@ export_image_hyperv () {
     ## convert img to hyperv
     qemu-img resize -f raw ./"$IMG_NAME".img 11G
     qemu-img convert -p -f raw -O vhdx ./"$IMG_NAME".img ./"$IMG_NAME".vhdx
+    chown "$SUDO_USER":"$SUDO_USER" ./"$IMG_NAME".vhdx
     echo ""
     success "VHDX image for HYPER-V created"
     info "Arch Linux does not have official support of UEFI Secure shell"
@@ -842,6 +844,7 @@ export_image_wmware () {
     ## convert img to vmware
     qemu-img resize -f raw ./"$IMG_NAME".img 11G
     qemu-img convert -p -f raw -O vmdk ./"$IMG_NAME".img ./"$IMG_NAME".vmdk
+    chown "$SUDO_USER":"$SUDO_USER" ./"$IMG_NAME".vmdk
     echo ""
     success "VMDK image for VMWARE created"
     info "VMWARE Workstation create VM without UEFI"
@@ -867,6 +870,8 @@ run_in_qemu () {
     warn "Creating img clone to run in qemu..."
     ## create img copy for test in qemu
     cp ./"$IMG_NAME".img ./"$IMG_NAME"-test-qemu.img
+    chown "$SUDO_USER":"$SUDO_USER" ./"$IMG_NAME"-test-qemu.img
+    chown "$SUDO_USER":"$SUDO_USER" ./"$IMG_NAME".img
     ## run qemu
     qemu-system-x86_64 \
         -enable-kvm \
